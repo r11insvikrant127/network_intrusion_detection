@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from imblearn.over_sampling import SMOTE
@@ -18,15 +19,30 @@ def load_data(train_path, test_path):
 
 
 # -----------------------------
-# Preprocess Features
+# Train Test Split
 # -----------------------------
-def preprocess_features(df):
+def split_data(df, test_size=0.2, random_state=42):
 
     X = df.drop("label", axis=1)
     y = df["label"]
 
-    categorical_cols = X.select_dtypes(include=['object']).columns
-    numeric_cols = X.select_dtypes(exclude=['object']).columns
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y
+    )
+
+    return X_train, X_test, y_train, y_test
+
+
+# -----------------------------
+# Preprocess Features
+# -----------------------------
+def preprocess_features(X_train, X_test):
+
+    categorical_cols = X_train.select_dtypes(include=['object']).columns
+    numeric_cols = X_train.select_dtypes(exclude=['object']).columns
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -35,9 +51,13 @@ def preprocess_features(df):
         ]
     )
 
-    X_processed = preprocessor.fit_transform(X)
+    # Fit ONLY on training data
+    X_train_processed = preprocessor.fit_transform(X_train)
 
-    return X_processed, y, preprocessor
+    # Transform test data
+    X_test_processed = preprocessor.transform(X_test)
+
+    return X_train_processed, X_test_processed, preprocessor
 
 
 # -----------------------------
@@ -50,18 +70,19 @@ def plot_class_distribution(y, filename):
     plt.figure()
     plt.pie(counts, labels=counts.index, autopct='%1.1f%%')
     plt.title("Class Distribution")
+
     plt.savefig(filename)
     plt.close()
 
 
 # -----------------------------
-# Apply SMOTE
+# Apply SMOTE (TRAIN ONLY)
 # -----------------------------
-def apply_smote(X, y):
+def apply_smote(X_train, y_train):
 
     smote = SMOTE(random_state=42)
 
-    X_resampled, y_resampled = smote.fit_resample(X, y)
+    X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
 
     return X_resampled, y_resampled
 
@@ -73,7 +94,10 @@ def scale_features(X_train, X_test):
 
     scaler = StandardScaler(with_mean=False)
 
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+    # Fit on train only
+    X_train_scaled = scaler.fit_transform(X_train)
 
-    return X_train, X_test, scaler
+    # Transform test
+    X_test_scaled = scaler.transform(X_test)
+
+    return X_train_scaled, X_test_scaled, scaler
