@@ -23,11 +23,17 @@ Classifiers used:
 - KNN
 - Decision Tree
 - Random Forest
-- SVM
-- Gradient Boosting
+- SVM_RBF
+- Naive Bayes
+
+Create Conda environement:
+conda create --prefix ./myenv python=3.10 -y
+
+Activating Conda:
+conda activate ./myenv
 
 Run training:
 python src/train_models.py
 
 Run GUI:
-python src/gui.py
+streamlit run src/app.py

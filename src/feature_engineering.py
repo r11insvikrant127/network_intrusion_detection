@@ -57,3 +57,5 @@ def apply_pca(X_train, X_test, n_components=20):
     X_test_pca = pca.transform(X_test)
 
     return X_train_pca, X_test_pca, pca
+
+

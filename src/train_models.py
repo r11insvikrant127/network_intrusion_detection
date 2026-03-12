@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Improve CPU parallel usage
 os.environ["OMP_NUM_THREADS"] = "8"
@@ -10,8 +11,8 @@ from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.svm import LinearSVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 
 from data_preprocessing import *
@@ -45,7 +46,7 @@ y_test = test_df["label"]
 plot_class_distribution(y_train, "outputs/before_smote.png")
 
 # -----------------------
-# Correlation Heatmap (training data only)
+# Correlation Heatmap
 # -----------------------
 correlation_heatmap(train_df)
 
@@ -58,7 +59,7 @@ X_train, X_test, preprocessor = preprocess_features(
 )
 
 # -----------------------
-# SMOTE (train only)
+# SMOTE
 # -----------------------
 X_train, y_train = apply_smote(X_train, y_train)
 
@@ -72,11 +73,26 @@ X_train, X_test, scaler = scale_features(X_train, X_test)
 # -----------------------
 # Feature Importance
 # -----------------------
+
+# Calculate feature importance
 importance = feature_importance(X_train, y_train)
 
-plt.figure(figsize=(10,5))
-plt.bar(range(len(importance)), importance)
-plt.title("Feature Importance (%)")
+# Get feature names after preprocessing
+feature_names = preprocessor.get_feature_names_out()
+
+# Convert to numpy array
+feature_names = np.array(feature_names)
+
+# Get top 20 most important features
+indices = np.argsort(importance)[-20:]
+
+plt.figure(figsize=(12,6))
+plt.barh(feature_names[indices], importance[indices])
+
+plt.xlabel("Importance (%)")
+plt.title("Top 20 Most Important Features")
+
+plt.tight_layout()
 plt.savefig("outputs/feature_importance.png")
 plt.close()
 
@@ -90,23 +106,23 @@ X_train_pca, X_test_pca, pca = apply_pca(
 )
 
 # -----------------------
-# Models + Parameter Grids
+# Models
 # -----------------------
 models = {
 
     "Logistic": (
         LogisticRegression(max_iter=2000, n_jobs=-1),
-        {"C":[0.1,1,10]}
+        {"C":[0.1,1]}
     ),
 
     "KNN": (
         KNeighborsClassifier(),
-        {"n_neighbors":[3,5,7]}
+        {"n_neighbors":[3,5]}
     ),
 
     "DecisionTree": (
         DecisionTreeClassifier(),
-        {"max_depth":[5,10,20]}
+        {"max_depth":[10,20]}
     ),
 
     "RandomForest": (
@@ -117,23 +133,15 @@ models = {
         }
     ),
 
-    "SVM": (
-        LinearSVC(max_iter=5000),
-        {"C":[0.1,1,10]}
-    ),
-
-    "GradientBoost": (
-        GradientBoostingClassifier(),
-        {
-            "n_estimators":[100,200],
-            "learning_rate":[0.05,0.1]
-        }
+    "SVM_RBF": (
+        SVC(kernel="rbf"),
+        {"C":[0.1,1], "gamma":["scale","auto"]}
     ),
 
     "NaiveBayes": (
         GaussianNB(),
         {
-            "var_smoothing":[1e-12,1e-10,1e-8]
+            "var_smoothing":[1e-12,1e-10]
         }
     )
 }
@@ -162,7 +170,7 @@ for name,(model,param_grid) in models.items():
         n_jobs=-1
     )
 
-    # Hyperparameter tuning
+    # GridSearch
     grid = GridSearchCV(
         model,
         param_grid,
@@ -210,12 +218,33 @@ results_df = pd.DataFrame(
     columns=["Model","CV Accuracy","Accuracy","Precision","Recall","F1"]
 )
 
-results_df.to_csv("outputs/model_comparison.csv",index=False)
+results_df.to_csv("data/model_comparison.csv",index=False)
 
 # -----------------------
-# Save Best Model
+# Model Comparison Bar Graph
 # -----------------------
-joblib.dump(best_model,"models/final_model.pkl")
+plt.figure(figsize=(10,6))
+
+x = range(len(results_df["Model"]))
+
+plt.bar(x, results_df["Accuracy"], width=0.2, label="Accuracy")
+plt.bar([i + 0.2 for i in x], results_df["Precision"], width=0.2, label="Precision")
+plt.bar([i + 0.4 for i in x], results_df["Recall"], width=0.2, label="Recall")
+plt.bar([i + 0.6 for i in x], results_df["F1"], width=0.2, label="F1")
+
+plt.xticks([i + 0.3 for i in x], results_df["Model"], rotation=45)
+plt.ylabel("Score")
+plt.title("Model Performance Comparison")
+plt.legend()
+
+plt.tight_layout()
+plt.savefig("outputs/model_comparison.png")
+plt.close()
+
+# -----------------------
+# Save Best Model using Joblib
+# -----------------------
+joblib.dump(best_model, "models/best_model.pkl")
 
 print(f"\nBest model selected: {best_model_name}")
-print("Model saved successfully.")
+print("Model saved successfully as models/best_model.pkl")

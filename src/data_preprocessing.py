@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from imblearn.over_sampling import SMOTE
@@ -16,24 +15,6 @@ def load_data(train_path, test_path):
     test = pd.read_csv(test_path)
 
     return train, test
-
-
-# -----------------------------
-# Train Test Split
-# -----------------------------
-def split_data(df, test_size=0.2, random_state=42):
-
-    X = df.drop("label", axis=1)
-    y = df["label"]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y,
-        test_size=test_size,
-        random_state=random_state,
-        stratify=y
-    )
-
-    return X_train, X_test, y_train, y_test
 
 
 # -----------------------------
@@ -101,3 +82,7 @@ def scale_features(X_train, X_test):
     X_test_scaled = scaler.transform(X_test)
 
     return X_train_scaled, X_test_scaled, scaler
+
+
+
+
