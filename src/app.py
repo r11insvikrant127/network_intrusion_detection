@@ -12,7 +12,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-from PIL import Image
+from PIL import Images
 import os
 
 # -----------------------------
