@@ -12,7 +12,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
-from PIL import Images
+from PIL import Image
 import os
 
 # -----------------------------
@@ -82,9 +82,7 @@ if uploaded_file is not None:
     else:
         X = df.copy()
 
-    # Remove id column if present
-    if "id" in X.columns:
-        X = X.drop("id", axis=1)
+    
 
     try:
 
